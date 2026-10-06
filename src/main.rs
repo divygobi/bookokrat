@@ -207,6 +207,18 @@ fn main() -> Result<()> {
     let piped = args.file.as_deref().is_some_and(piped_input::is_stream_arg);
     let library_file = if piped { None } else { args.file.as_deref() };
 
+    {
+        use std::io::IsTerminal;
+        if !args.test_mode && !stdout().is_terminal() {
+            eprintln!(
+                "Error: bookokrat is interactive and needs a terminal on stdout.\n\
+                 Run it without redirecting or piping its output:\n  \
+                 bookokrat <file>\n  bookokrat -d <directory>"
+            );
+            std::process::exit(1);
+        }
+    }
+
     // Layer user's keybindings.toml overrides on top of the built-in defaults.
     // Tests deliberately skip this so they stay hermetic with respect to
     // `~/.config/bookokrat/`. Any issues are surfaced to the app below so it
