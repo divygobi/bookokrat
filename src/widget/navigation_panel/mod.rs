@@ -62,6 +62,7 @@ pub struct NavigationPanel {
     pub table_of_contents: TableOfContents,
     pub current_book_path: Option<String>,
     settings: RuntimeSettings,
+    count: Option<usize>,
 }
 
 impl NavigationPanel {
@@ -73,6 +74,7 @@ impl NavigationPanel {
             table_of_contents: TableOfContents::new(settings.clone()),
             current_book_path: None,
             settings,
+            count: None,
         }
     }
 
@@ -279,6 +281,21 @@ impl NavigationPanel {
         use crate::keybindings::context::KeyContext;
         use crate::keybindings::keymap::LookupResult;
         use crate::keybindings::notation::key_event_to_input;
+        use crossterm::event::{KeyCode, KeyModifiers};
+
+        if let KeyCode::Char(ch @ '0'..='9') = key.code {
+            if key.modifiers == KeyModifiers::NONE
+                && key_seq.is_empty()
+                && (ch != '0' || self.count.is_some())
+            {
+                let current = self.count.unwrap_or(0);
+                if current < 10000 {
+                    self.count = Some(current * 10 + (ch as usize - '0' as usize));
+                }
+                return None;
+            }
+        }
+        let count = self.count.take().unwrap_or(1);
 
         let input = key_event_to_input(&key);
         let km = crate::keybindings::keymap();
@@ -290,7 +307,7 @@ impl NavigationPanel {
         match km.lookup(KeyContext::Navigation, &prospective) {
             LookupResult::Found(action) => {
                 key_seq.clear();
-                self.dispatch_nav_action(action)
+                self.dispatch_nav_action(action, count)
             }
             LookupResult::Prefix => {
                 key_seq.push(key);
@@ -302,7 +319,7 @@ impl NavigationPanel {
                     // Clear and try single key.
                     key_seq.clear();
                     match km.lookup(KeyContext::Navigation, &[key_event_to_input(&key)]) {
-                        LookupResult::Found(action) => self.dispatch_nav_action(action),
+                        LookupResult::Found(action) => self.dispatch_nav_action(action, count),
                         LookupResult::Prefix => {
                             key_seq.push(key);
                             None
@@ -319,6 +336,7 @@ impl NavigationPanel {
     fn dispatch_nav_action(
         &mut self,
         action: crate::keybindings::action::Action,
+        count: usize,
     ) -> Option<NavigationPanelAction> {
         use crate::keybindings::action::Action;
 
@@ -329,11 +347,15 @@ impl NavigationPanel {
                 None
             }
             Action::MoveDown => {
-                self.handle_j();
+                for _ in 0..count {
+                    self.handle_j();
+                }
                 None
             }
             Action::MoveUp => {
-                self.move_selection_up();
+                for _ in 0..count {
+                    self.move_selection_up();
+                }
                 None
             }
             Action::ToggleSortOrder if self.mode == NavigationMode::BookSelection => {
