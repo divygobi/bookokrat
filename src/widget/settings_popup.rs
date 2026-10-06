@@ -26,6 +26,7 @@ pub enum SettingsAction {
     RenderModeChanged,
     EpubImageSizeChanged,
     InlineAnnotationsChanged,
+    BionicReadingChanged,
     TestLookupCommand,
     TestSynctexEditor,
 }
@@ -125,9 +126,11 @@ enum GeneralOption {
     EpubImagesCompact,
     AnnotationsInline,
     AnnotationsHidden,
+    BionicOff,
+    BionicOn,
 }
 
-const GENERAL_OPTIONS: [GeneralOption; 16] = [
+const GENERAL_OPTIONS: [GeneralOption; 18] = [
     GeneralOption::PdfEnabled,
     GeneralOption::PdfDisabled,
     GeneralOption::PdfRenderPage,
@@ -144,6 +147,8 @@ const GENERAL_OPTIONS: [GeneralOption; 16] = [
     GeneralOption::EpubImagesCompact,
     GeneralOption::AnnotationsInline,
     GeneralOption::AnnotationsHidden,
+    GeneralOption::BionicOff,
+    GeneralOption::BionicOn,
 ];
 
 impl GeneralOption {
@@ -165,6 +170,8 @@ impl GeneralOption {
             Self::EpubImagesCompact => 13,
             Self::AnnotationsInline => 14,
             Self::AnnotationsHidden => 15,
+            Self::BionicOff => 16,
+            Self::BionicOn => 17,
         }
     }
 
@@ -773,6 +780,7 @@ impl SettingsPopup {
         let zen_hide_border = snapshot.zen_hide_border;
         let current_image_size = snapshot.epub_image_size;
         let show_inline_annotations = snapshot.show_inline_annotations;
+        let bionic_reading = snapshot.bionic_reading;
 
         vec![
             SettingsSection {
@@ -886,6 +894,29 @@ impl SettingsPopup {
                         label: "Hidden",
                         hint: Some("underline only, K peeks"),
                         selected: !show_inline_annotations,
+                        enabled: true,
+                    },
+                ],
+            },
+            SettingsSection {
+                title: "Bionic Reading",
+                title_indent: 0,
+                options_indent: 2,
+                options_top_spacing: 0,
+                enabled: true,
+                options: vec![
+                    SettingsOption {
+                        id: GeneralOption::BionicOff,
+                        label: "Off",
+                        hint: Some("normal text"),
+                        selected: !bionic_reading,
+                        enabled: true,
+                    },
+                    SettingsOption {
+                        id: GeneralOption::BionicOn,
+                        label: "On",
+                        hint: Some("bold word starts"),
+                        selected: bionic_reading,
                         enabled: true,
                     },
                 ],
@@ -1351,7 +1382,9 @@ impl SettingsPopup {
             | GeneralOption::EpubImagesAdaptive
             | GeneralOption::EpubImagesCompact
             | GeneralOption::AnnotationsInline
-            | GeneralOption::AnnotationsHidden => true,
+            | GeneralOption::AnnotationsHidden
+            | GeneralOption::BionicOff
+            | GeneralOption::BionicOn => true,
         }
     }
 
@@ -1506,6 +1539,22 @@ impl SettingsPopup {
                     self.settings
                         .update(|settings| settings.show_inline_annotations = false);
                     return Some(SettingsAction::InlineAnnotationsChanged);
+                }
+                None
+            }
+            GeneralOption::BionicOff => {
+                if snapshot.bionic_reading {
+                    self.settings
+                        .update(|settings| settings.bionic_reading = false);
+                    return Some(SettingsAction::BionicReadingChanged);
+                }
+                None
+            }
+            GeneralOption::BionicOn => {
+                if !snapshot.bionic_reading {
+                    self.settings
+                        .update(|settings| settings.bionic_reading = true);
+                    return Some(SettingsAction::BionicReadingChanged);
                 }
                 None
             }

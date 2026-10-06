@@ -181,6 +181,9 @@ pub struct Settings {
     pub show_inline_annotations: bool,
 
     #[serde(default)]
+    pub bionic_reading: bool,
+
+    #[serde(default)]
     pub invert_scroll_direction: bool,
 
     #[serde(default)]
@@ -239,6 +242,7 @@ impl Default for Settings {
             custom_themes: Vec::new(),
             justify_text: false,
             show_inline_annotations: true,
+            bionic_reading: false,
             invert_scroll_direction: false,
             zen_hide_border: false,
             book_sort_order: BookSortOrder::default(),
@@ -695,6 +699,10 @@ fn app_managed_key_values(settings: &Settings) -> Vec<(String, String)> {
             format!("{}", settings.show_inline_annotations),
         ),
         (
+            "bionic_reading".into(),
+            format!("{}", settings.bionic_reading),
+        ),
+        (
             "invert_scroll_direction".into(),
             format!("{}", settings.invert_scroll_direction),
         ),
@@ -788,6 +796,7 @@ fn generate_settings_yaml(settings: &Settings) -> String {
         BookSortOrder::ByType => "by_type",
     };
     content.push_str(&format!("justify_text: {}\n", settings.justify_text));
+    content.push_str(&format!("bionic_reading: {}\n", settings.bionic_reading));
     content.push_str(&format!(
         "show_inline_annotations: {}\n",
         settings.show_inline_annotations

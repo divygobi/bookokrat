@@ -1377,7 +1377,11 @@ impl crate::markdown_text_reader::MarkdownTextReader {
         match item {
             TextOrInline::Text(text_node) => {
                 let styled_span = self.style_text_node(text_node, palette, is_focused);
-                rich_spans.push(RichSpan::Text(styled_span));
+                if text_node.style != Some(Style::Code) && self.settings.load().bionic_reading {
+                    rich_spans.extend(bionic_spans(&styled_span).into_iter().map(RichSpan::Text));
+                } else {
+                    rich_spans.push(RichSpan::Text(styled_span));
+                }
             }
 
             TextOrInline::Inline(inline) => {
@@ -4808,6 +4812,42 @@ impl crate::markdown_text_reader::MarkdownTextReader {
         self.raw_text_lines.push(String::new());
         *total_height += 1;
     }
+}
+
+/// Split a span so the first half of every word is bold (bionic reading).
+/// The text is unchanged; only span boundaries and styles differ.
+fn bionic_spans(span: &Span<'static>) -> Vec<Span<'static>> {
+    let bold = span.style.add_modifier(Modifier::BOLD);
+    let mut spans = Vec::new();
+    let mut plain = String::new();
+    let mut word = String::new();
+    let flush_word = |word: &mut String, plain: &mut String, spans: &mut Vec<Span<'static>>| {
+        if word.is_empty() {
+            return;
+        }
+        if !plain.is_empty() {
+            spans.push(Span::styled(std::mem::take(plain), span.style));
+        }
+        let head_len = word.chars().count().div_ceil(2);
+        let head: String = word.chars().take(head_len).collect();
+        let tail: String = word.chars().skip(head_len).collect();
+        spans.push(Span::styled(head, bold));
+        plain.push_str(&tail);
+        word.clear();
+    };
+    for ch in span.content.chars() {
+        if ch.is_alphanumeric() {
+            word.push(ch);
+        } else {
+            flush_word(&mut word, &mut plain, &mut spans);
+            plain.push(ch);
+        }
+    }
+    flush_word(&mut word, &mut plain, &mut spans);
+    if !plain.is_empty() {
+        spans.push(Span::styled(plain, span.style));
+    }
+    spans
 }
 
 /// Justify a line by distributing extra spaces between words.

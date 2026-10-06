@@ -5582,6 +5582,9 @@ impl App {
                 let enabled = self.settings.load().show_inline_annotations;
                 self.text_reader.set_show_inline_annotations(enabled);
             }
+            SettingsAction::BionicReadingChanged => {
+                self.text_reader.invalidate_render_cache();
+            }
             SettingsAction::RenderModeChanged => {
                 // Page and scroll mode store the reading position differently, so
                 // convert it instead of jumping to the first page.
